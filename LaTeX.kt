@@ -69,8 +69,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
-import com.example.latex.LaTeXScope.Companion.mathMetaphor
-import com.example.latex.LaTeXScope.Companion.parenthesis
+import com.example.fxcalculator.LaTeXScope.Companion.mathMetaphor
+import com.example.fxcalculator.LaTeXScope.Companion.parenthesis
 
 private const val reduceFontFactor = 0.75f
 
@@ -144,31 +144,6 @@ private fun Placeable.measureAlignmentsOrDecorationLines() = LaTeXAlignmentsOrPr
     this.measureHasDecorationLine(UnderlineConst)
 )
 
-/**
- * I don't understand everything but the Box Composable handles empty Box separately,
- * and so I handle empty Matrix Composable separately as well.
- */
-/*
-@Composable
-fun Matrix(modifier: Modifier) {
-    Layout({}, measurePolicy = EmptyMatrixMeasurePolicy, modifier = modifier)
-}
-
-
-@Composable
-fun Matrix(
-    modifier: Modifier = Modifier,
-    alignment: String = "",
-    padding: PaddingValues = PaddingValues(all = 0.dp),
-    content: @Composable LatexScope.() -> Unit
-) {
-    Layout(
-        modifier = modifier,
-        measurePolicy = matrixMeasurePolicy(alignment = alignment, padding = padding),
-        content = content
-    )
-}
-*/
 @Composable
 fun LaTeX(
     laTeX: String,
@@ -365,11 +340,21 @@ private fun LaTeX(
 
                     val y = offsets[referenceIndex].y.toFloat()
 
-                    moveTo(x, y)
+                    moveTo(x, y + pWidth / 2)
                     when (parenthesis.type) {
+                        '(', ')' -> {
+                            val rect = Rect(
+                                x - pWidth,
+                                y + pWidth / 2,
+                                x + pWidth,
+                                y + pHeight - pWidth / 2
+                            )
+                            arcTo(rect, -90f, dirConst * 180f, true)
+                        }
+
                         '[', ']' -> {
                             relativeLineTo(pWidth * dirConst / 2, 0f)
-                            relativeLineTo(0f, pHeight)
+                            relativeLineTo(0f, pHeight - pWidth)
                             relativeLineTo(-pWidth * dirConst / 2, 0f)
                         }
 
@@ -407,12 +392,12 @@ private fun LaTeX(
                         }
 
                         '<', '>' -> {
-                            relativeLineTo(pWidth * dirConst, pHeight / 2)
-                            relativeLineTo(-pWidth * dirConst, pHeight / 2)
+                            relativeLineTo(pWidth * dirConst, pHeight / 2 - pWidth / 2)
+                            relativeLineTo(-pWidth * dirConst, pHeight / 2 - pWidth / 2)
                         }
 
                         '|' -> {
-                            relativeLineTo(0f, pHeight)
+                            relativeLineTo(0f, pHeight - pWidth)
                         }
                     }
                 }
