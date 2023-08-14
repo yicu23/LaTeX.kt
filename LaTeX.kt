@@ -1,4 +1,11 @@
-// TODO:
+// TODO: support for summation
+// Since last update:
+// _a^b follows nextReferenceIndex if lastReferenceIndex < 0,
+// Added \int
+// Refactor some names to make the program more readable.
+// Adjusted paddings between operators and functions
+// Added support for \mathrm
+// Streamlining some codes
 
 /* The following is useful that I just keep it for reference later
 
@@ -44,9 +51,10 @@ or leave a Composable without any code to display all contents.
 
  */
 
-package com.example.latex
+package com.example.fxcalculator
 
 import androidx.annotation.ArrayRes
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -64,12 +72,15 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.ParentDataModifier
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
-import com.example.fxcalculator.LaTeXScope.Companion.mathMetaphor
+import androidx.compose.ui.unit.dp
+import com.example.fxcalculator.LaTeXScope.Companion.attachMathMetaphor
 import com.example.fxcalculator.LaTeXScope.Companion.parenthesis
 
 private const val reduceFontFactor = 0.75f
@@ -190,7 +201,7 @@ private fun LaTeX(
 
         fun Placeable.lastReferenceIndex(): Int {
             var i = placeables.indexOf(this) - 1
-            while (i >= 0 && measurables[i].alignment != LaTeXAlignment.UNSPECIFIED) {
+            while (i >= 0 && measurables[i].alignment != AlignmentMetaphor.UNSPECIFIED) {
                 i--
             }
             return i
@@ -198,7 +209,7 @@ private fun LaTeX(
 
         fun Placeable.nextReferenceIndex(): Int {
             var i = placeables.indexOf(this) + 1
-            while (i < placeables.size && measurables[i].alignment != LaTeXAlignment.UNSPECIFIED) {
+            while (i < placeables.size && measurables[i].alignment != AlignmentMetaphor.UNSPECIFIED) {
                 i++
             }
             return if (i < placeables.size) i else -1
@@ -218,10 +229,13 @@ private fun LaTeX(
             var (ceilingLine, waistLine, floorLine, basementLine, hasOverline, hasUnderline)
                     = placeable.measureAlignmentsOrDecorationLines()
 
-            if (measurable.alignment == LaTeXAlignment.SUPERSCRIPT
-                || measurable.alignment == LaTeXAlignment.SUPERSCRIPT_
+            if (measurable.alignment == AlignmentMetaphor.SUPERSCRIPT
+                || measurable.alignment == AlignmentMetaphor.SUPERSCRIPT_
             ) {
-                val referenceIndex = placeable.lastReferenceIndex()
+                val referenceIndex = with(placeable) {
+                    val lastRefIndex = lastReferenceIndex()
+                    if (lastRefIndex < 0) nextReferenceIndex() else lastRefIndex
+                }
                 waistLine = if (
                     referenceIndex >= 0
                     && waistLines[referenceIndex] - ceilingLines[referenceIndex] > basementLine / 2
@@ -232,8 +246,8 @@ private fun LaTeX(
                 }
             }
 
-            if (measurable.alignment == LaTeXAlignment.SUBSCRIPT
-                || measurable.alignment == LaTeXAlignment.SUBSCRIPT_
+            if (measurable.alignment == AlignmentMetaphor.SUBSCRIPT
+                || measurable.alignment == AlignmentMetaphor.SUBSCRIPT_
             ) {
                 val referenceIndex = placeable.lastReferenceIndex()
                 waistLine = if (
@@ -281,26 +295,49 @@ private fun LaTeX(
             offsets.add(IntOffset(x, y))
             if (measurable.alignment in doubleScript) {
                 x += maxOf(placeables[index - 1].width, placeable.width)
-            } else if (measurable.alignment == LaTeXAlignment.UNSPECIFIED
+            } else if (measurable.alignment == AlignmentMetaphor.UNSPECIFIED
                 && measurable.mathMetaphor != MathMetaphor.UNSPECIFIED
-                && placeable.nextReferenceIndex() >= 0
             ) {
-                if (measurable.mathMetaphor == MathMetaphor.FUNCTION) {
-                    x += placeable.width + functionPadding
-                } else if (measurable.mathMetaphor == MathMetaphor.OPERATOR &&
-                    placeable.lastReferenceIndex() >= 0
-                ) {
-                    offsets[offsets.lastIndex] = offsets.last() + IntOffset(operatorPadding, 0)
-                    x += placeable.width + 2 * operatorPadding
-                } else if (measurable.mathMetaphor == MathMetaphor.COMPARATOR &&
-                    placeable.lastReferenceIndex() >= 0
-                ) {
-                    offsets[offsets.lastIndex] =
-                        offsets.last() + IntOffset(comparatorPadding, 0)
-                    x += placeable.width + 2 * comparatorPadding
-                } else {
-                    x += placeable.width
+                val lastIndex = placeable.lastReferenceIndex()
+                val lastMathMetaphor = if (lastIndex < 0
+                ) null else measurables[lastIndex].mathMetaphor
+                val nextIndex = placeable.nextReferenceIndex()
+                val nextMathMetaphor = if (nextIndex < 0
+                ) null else measurables[nextIndex].mathMetaphor
+
+                when (measurable.mathMetaphor) {
+                    MathMetaphor.FUNCTION -> {
+                        if (lastMathMetaphor == MathMetaphor.UNSPECIFIED) {
+                            offsets[offsets.lastIndex] =
+                                offsets.last() + IntOffset(functionPadding, 0)
+                            x += functionPadding
+                        }
+                        if (nextMathMetaphor != null) x += functionPadding
+                    }
+
+                    MathMetaphor.OPERATOR -> {
+                        if (lastMathMetaphor == MathMetaphor.UNSPECIFIED
+                            && nextMathMetaphor == MathMetaphor.UNSPECIFIED
+                        ) {
+                            offsets[offsets.lastIndex] =
+                                offsets.last() + IntOffset(operatorPadding, 0)
+                            x += 2 * operatorPadding
+                        }
+                    }
+
+                    MathMetaphor.COMPARATOR -> {
+                        if (lastMathMetaphor == MathMetaphor.UNSPECIFIED
+                            && nextMathMetaphor == MathMetaphor.UNSPECIFIED
+                        ) {
+                            offsets[offsets.lastIndex] =
+                                offsets.last() + IntOffset(comparatorPadding, 0)
+                            x += 2 * comparatorPadding
+                        }
+                    }
+
+                    else -> {}
                 }
+                x += placeable.width
             } else if (
                 index == measurables.lastIndex
                 || measurables[index + 1].alignment !in doubleScript
@@ -328,21 +365,27 @@ private fun LaTeX(
                             x = (offsets[index].x + placeable.width.toFloat())
                             dirConst = -1
                             placeable.nextReferenceIndex()
-                        } else {
+                        } else if (parenthesis.directionOfOpening == LayoutDirection.Rtl) {
                             x = offsets[index].x.toFloat()
                             dirConst = 1
                             placeable.lastReferenceIndex()
+                        } else {
+                            x = offsets[index].x + placeable.width / 2f
+                            dirConst = 0
+                            index
                         }
                     if (referenceIndex < 0) referenceIndex = index
 
                     val pWidth = placeable.width.toFloat()
-                    val pHeight = placeables[referenceIndex][BasementLine].toFloat()
+                    val pHeight = placeables[referenceIndex]
+                        .measureAlignment(BasementLine)
+                        .toFloat()
 
                     val y = offsets[referenceIndex].y.toFloat()
 
-                    moveTo(x, y + pWidth / 2)
                     when (parenthesis.type) {
                         '(', ')' -> {
+                            moveTo(x, y + pWidth / 2)
                             val rect = Rect(
                                 x - pWidth,
                                 y + pWidth / 2,
@@ -353,12 +396,14 @@ private fun LaTeX(
                         }
 
                         '[', ']' -> {
+                            moveTo(x, y + pWidth / 2)
                             relativeLineTo(pWidth * dirConst / 2, 0f)
                             relativeLineTo(0f, pHeight - pWidth)
                             relativeLineTo(-pWidth * dirConst / 2, 0f)
                         }
 
                         '{', '}' -> {
+                            moveTo(x, y + pWidth / 2)
                             var rect = Rect(
                                 x - pWidth / 2,
                                 y + pWidth / 2,
@@ -367,38 +412,32 @@ private fun LaTeX(
                             )
                             arcTo(rect, -90f, dirConst * 90f, true)
                             relativeLineTo(0f, pHeight / 2 - pWidth * 1.5f)
-                            rect = Rect(
-                                x + pWidth * (dirConst - 0.5f),
-                                y + pHeight / 2 - pWidth,
-                                x + pWidth * (dirConst + 0.5f),
-                                y + pHeight / 2
+                            arcTo(
+                                rect.translate(pWidth * dirConst, pHeight / 2 - pWidth * 3 / 2),
+                                (dirConst + 1) * 90f, -dirConst * 90f, true
                             )
-                            arcTo(rect, (dirConst + 1) * 90f, -dirConst * 90f, true)
-                            rect = Rect(
-                                x + pWidth * (dirConst - 0.5f),
-                                y + pHeight / 2,
-                                x + pWidth * (dirConst + 0.5f),
-                                y + pHeight / 2 + pWidth
+                            arcTo(
+                                rect.translate(pWidth * dirConst, pHeight / 2 - pWidth / 2),
+                                -90f, -dirConst * 90f, true
                             )
-                            arcTo(rect, -90f, -dirConst * 90f, true)
                             relativeLineTo(0f, pHeight / 2 - pWidth * 1.5f)
-                            rect = Rect(
-                                x - pWidth / 2,
-                                y + pHeight - pWidth * 1.5f,
-                                x + pWidth / 2,
-                                y + pHeight - pWidth / 2
+                            arcTo(
+                                rect.translate(0f, pHeight - pWidth * 2),
+                                (dirConst - 1) * 90f, dirConst * 90f, true
                             )
-                            arcTo(rect, (dirConst - 1) * 90f, dirConst * 90f, true)
                         }
 
                         '<', '>' -> {
+                            moveTo(x, y + pWidth / 2)
                             relativeLineTo(pWidth * dirConst, pHeight / 2 - pWidth / 2)
                             relativeLineTo(-pWidth * dirConst, pHeight / 2 - pWidth / 2)
                         }
 
                         '|' -> {
+                            moveTo(x, y + pWidth / 2)
                             relativeLineTo(0f, pHeight - pWidth)
                         }
+
                     }
                 }
             }
@@ -447,6 +486,42 @@ private object LaTeX {
 
     private fun Path.relativeLineTo(x: Int, y: Int): Unit {
         this.relativeLineTo(x.toFloat(), y.toFloat())
+    }
+
+    @Composable
+    fun Integration(
+        modifier: Modifier = Modifier,
+        fontSize: TextUnit
+    ) {
+        Layout(
+            modifier = modifier,
+            content = {
+                Text(
+                    text = '\u222b'.toString(),
+                    fontSize = fontSize.times(2.5f),
+                    fontWeight = FontWeight.Light
+                )
+            }
+        ) { measurables, constraints ->
+            val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+            val placeable = measurables[0].measure(looseConstraints)
+            val refHeight = placeable[FirstBaseline]
+
+            val alignmentLinesMap = mutableMapOf<AlignmentLine, Int>(
+                CeilingLine to (refHeight * 6 + 35) / 70,
+                WaistLine to (refHeight * 38 + 35) / 70,
+                FloorLine to refHeight,
+                BasementLine to (refHeight * 12 + 5) / 10
+            )
+
+            layout(
+                width = (placeable.width * 14 + 5) / 10,
+                height = alignmentLinesMap[BasementLine]!!,
+                alignmentLines = alignmentLinesMap
+            ) {
+                placeable.place((placeable.width * 2 + 5) / 10, -(refHeight * 2 + 5) / 10)
+            }
+        }
     }
 
     @Composable
@@ -654,7 +729,7 @@ private object LaTeX {
             val vertPadding = fontSize.div(7).roundToPx()
             var yPlace = 0
 
-            if (measurable.decoration == LaTeXDecoration.UNDERLINE) {
+            if (measurable.decoration == DecorationMetaphor.UNDERLINE) {
                 floorLine += vertPadding
                 if (hasUnderline) {
                     basementLine += vertPadding
@@ -678,7 +753,7 @@ private object LaTeX {
                 if (turtlePath.isEmpty) with(turtlePath) { // Skip if recomposition
                     val arrowWidth = vertPadding / 2
                     when (measurable.decoration) {
-                        LaTeXDecoration.OVERLEFTARROW -> {
+                        DecorationMetaphor.OVERLEFTARROW -> {
                             moveTo(placeable.width, ceilingLine)
                             relativeLineTo(-placeable.width, 0)
                             relativeMoveTo(arrowWidth, -arrowWidth)
@@ -686,7 +761,7 @@ private object LaTeX {
                             relativeLineTo(arrowWidth, arrowWidth)
                         }
 
-                        LaTeXDecoration.OVERRIGHTARROW -> {
+                        DecorationMetaphor.OVERRIGHTARROW -> {
                             moveTo(0, ceilingLine)
                             relativeLineTo(placeable.width, 0)
                             relativeMoveTo(-arrowWidth, -arrowWidth)
@@ -760,7 +835,7 @@ private object LaTeX {
             placeables.forEachIndexed() { index, placeable ->
                 val measurable = measurables[index]
 
-                if (measurable.arrayMetaphor == ArrayMetaphor.NEWROW) {
+                if (measurable.arrayCellMetaphor == ArrayCellMetaphor.NEWROW) {
                     rowHeight.add(0)
                     rowNum = rowHeight.lastIndex
                     colNum = 0
@@ -843,7 +918,7 @@ private object LaTeX {
                 placeables.forEachIndexed { index, placeable ->
                     val measurable = measurables[index]
 
-                    if (measurable.arrayMetaphor == ArrayMetaphor.NEWROW) {
+                    if (measurable.arrayCellMetaphor == ArrayCellMetaphor.NEWROW) {
                         rowNum++
                         colNum = 0
                     }
@@ -870,6 +945,7 @@ private object LaTeX {
 }
 
 private enum class ParseLaTeXStatus { NOERROR, ERROR, EXIT, ENDOFCELL, ENDOFROW, ENDOFBLOCK }
+private enum class ParseLaTeXTypeStyle { NORMAL, MATHRM }
 
 private object ParseLaTeX {
     private val RegexEndAtBrace =
@@ -887,6 +963,7 @@ private object ParseLaTeX {
     private var laText = ""
     var status = ParseLaTeXStatus.NOERROR
         private set
+    private var typeStyle = ParseLaTeXTypeStyle.NORMAL
 
     fun reset(text: String) {
         ptr = 0
@@ -921,11 +998,11 @@ private object ParseLaTeX {
                             // No chaining previous modifiers
                             modifier = Modifier.align(
                                 if (meta == "_") {
-                                    if (lastMeta == "^") LaTeXAlignment.SUBSCRIPT_
-                                    else LaTeXAlignment.SUBSCRIPT
+                                    if (lastMeta == "^") AlignmentMetaphor.SUBSCRIPT_
+                                    else AlignmentMetaphor.SUBSCRIPT
                                 } else {
-                                    if (lastMeta == "_") LaTeXAlignment.SUPERSCRIPT_
-                                    else LaTeXAlignment.SUPERSCRIPT
+                                    if (lastMeta == "_") AlignmentMetaphor.SUPERSCRIPT_
+                                    else AlignmentMetaphor.SUPERSCRIPT
                                 }
                             )
                         )
@@ -966,7 +1043,7 @@ private object ParseLaTeX {
                             text = meta!!,
                             fontSize = fontSize,
                             // No chaining previous modifiers
-                            modifier = Modifier.mathMetaphor(MathMetaphor.OPERATOR)
+                            modifier = Modifier.attachMathMetaphor(MathMetaphor.OPERATOR)
                         )
                     }
 
@@ -979,7 +1056,7 @@ private object ParseLaTeX {
                             }!!,
                             fontSize = fontSize,
                             // No chaining previous modifiers
-                            modifier = Modifier.mathMetaphor(MathMetaphor.COMPARATOR)
+                            modifier = Modifier.attachMathMetaphor(MathMetaphor.COMPARATOR)
                         )
                     }
 
@@ -989,7 +1066,8 @@ private object ParseLaTeX {
                             Text(
                                 text = metaNoSpace,
                                 fontSize = fontSize,
-                                fontStyle = if (metaNoSpace.all { it.isLetter() }
+                                fontStyle = if (typeStyle == ParseLaTeXTypeStyle.NORMAL &&
+                                    metaNoSpace.all { it.isLetter() }
                                 ) FontStyle.Italic else FontStyle.Normal
                             )
                         }
@@ -1028,7 +1106,9 @@ private object ParseLaTeX {
                     modifier = modifier,
                     text = "$char",
                     fontSize = fontSize,
-                    fontStyle = if (char!!.isLetter()) FontStyle.Italic else FontStyle.Normal
+                    fontStyle = if (typeStyle == ParseLaTeXTypeStyle.NORMAL &&
+                        char!!.isLetter()
+                    ) FontStyle.Italic else FontStyle.Normal
                 )
                 status = ParseLaTeXStatus.EXIT
             }
@@ -1050,6 +1130,13 @@ private object ParseLaTeX {
 
             "end" -> {
                 status = ParseLaTeXStatus.ENDOFBLOCK
+            }
+
+            "mathrm" -> {
+                val currentTypeStyle = typeStyle
+                typeStyle = ParseLaTeXTypeStyle.MATHRM
+                ParseLaTeX.Singleton(fontSize = fontSize, modifier = modifier)
+                typeStyle = currentTypeStyle
             }
 
             "frac", "dfrac" -> {
@@ -1093,20 +1180,11 @@ private object ParseLaTeX {
                 )
             }
 
-            "overline" -> {
-                LaTeX.Decorate(
-                    modifier = modifier,
-                    fontSize = fontSize
-                ) {
-                    ParseLaTeX.Singleton(
-                        fontSize = fontSize,
-                        // No chaining previous modifiers
-                        modifier = Modifier.decorate(LaTeXDecoration.OVERLINE)
-                    )
-                }
+            "int" -> {
+                LaTeX.Integration(modifier = modifier, fontSize = fontSize)
             }
 
-            "underline" -> {
+            "overline", "underline", "overleftarrow", "overrightarrow" -> {
                 LaTeX.Decorate(
                     modifier = modifier,
                     fontSize = fontSize
@@ -1114,33 +1192,7 @@ private object ParseLaTeX {
                     ParseLaTeX.Singleton(
                         fontSize = fontSize,
                         // No chaining previous modifiers
-                        modifier = Modifier.decorate(LaTeXDecoration.UNDERLINE)
-                    )
-                }
-            }
-
-            "overleftarrow" -> {
-                LaTeX.Decorate(
-                    modifier = modifier,
-                    fontSize = fontSize
-                ) {
-                    ParseLaTeX.Singleton(
-                        fontSize = fontSize,
-                        // No chaining previous modifiers
-                        modifier = Modifier.decorate(LaTeXDecoration.OVERLEFTARROW)
-                    )
-                }
-            }
-
-            "overrightarrow" -> {
-                LaTeX.Decorate(
-                    modifier = modifier,
-                    fontSize = fontSize
-                ) {
-                    ParseLaTeX.Singleton(
-                        fontSize = fontSize,
-                        // No chaining previous modifiers
-                        modifier = Modifier.decorate(LaTeXDecoration.OVERRIGHTARROW)
+                        modifier = Modifier.decorate(DecorationMetaphor.fromString(command))
                     )
                 }
             }
@@ -1152,8 +1204,8 @@ private object ParseLaTeX {
                         text = text!!,
                         fontSize = fontSize,
                         modifier = if (command == "times" || command == "div")
-                            modifier.mathMetaphor(MathMetaphor.OPERATOR) else if (text.length > 1)
-                            modifier.mathMetaphor(MathMetaphor.FUNCTION) else modifier
+                            modifier.attachMathMetaphor(MathMetaphor.OPERATOR) else if (text.length > 1)
+                            modifier.attachMathMetaphor(MathMetaphor.FUNCTION) else modifier
                     )
                 } else Text(
                     text = "\\$command",
@@ -1190,7 +1242,7 @@ private object ParseLaTeX {
                     ) {
                         ParseLaTeX.Main(
                             modifier = if (status == ParseLaTeXStatus.ENDOFROW) {
-                                Modifier.arrayMetaphor(metaphor = ArrayMetaphor.NEWROW)
+                                Modifier.attachArrayCellMetaphor(metaphor = ArrayCellMetaphor.NEWROW)
                             } else {
                                 Modifier
                             },
@@ -1214,20 +1266,29 @@ private object ParseLaTeX {
     }
 }
 
-private enum class LaTeXAlignment { SUPERSCRIPT, SUPERSCRIPT_, SUBSCRIPT, SUBSCRIPT_, UNSPECIFIED }
+private enum class AlignmentMetaphor { SUPERSCRIPT, SUPERSCRIPT_, SUBSCRIPT, SUBSCRIPT_, UNSPECIFIED }
 
-private val doubleScript = listOf(LaTeXAlignment.SUPERSCRIPT_, LaTeXAlignment.SUBSCRIPT_)
+private val doubleScript = listOf(AlignmentMetaphor.SUPERSCRIPT_, AlignmentMetaphor.SUBSCRIPT_)
 
-private enum class LaTeXDecoration { OVERLINE, UNDERLINE, OVERLEFTARROW, OVERRIGHTARROW, UNSPECIFIED }
+private enum class DecorationMetaphor {
+    OVERLINE, UNDERLINE, OVERLEFTARROW, OVERRIGHTARROW, UNSPECIFIED;
 
-private enum class ArrayMetaphor { NEWROW, UNSPECIFIED }
+    companion object {
+        fun fromString(string: String): DecorationMetaphor =
+            DecorationMetaphor.values().reduce { s, t ->
+                if (s.toString() == string.uppercase()) s else t
+            }
+    }
+}
+
+private enum class ArrayCellMetaphor { NEWROW, UNSPECIFIED }
 
 private enum class MathMetaphor { OPERATOR, COMPARATOR, FUNCTION, UNSPECIFIED }
 
 private interface LaTeXScope {
     @Stable
-    fun Modifier.align(alignment: LaTeXAlignment) = this.then(
-        LaTeXAlignData(alignment = alignment)
+    fun Modifier.align(alignment: AlignmentMetaphor) = this.then(
+        LaTeXAlignment(alignment = alignment)
     )
 
     @Stable
@@ -1235,69 +1296,69 @@ private interface LaTeXScope {
         directionOfOpening: LayoutDirection?,
         parenthesis: Char
     ) = this.then(
-        LaTeXParenthesisDetail(
+        LaTeXParenthesis(
             directionOfOpening = directionOfOpening,
             type = parenthesis
         )
     )
 
     @Stable
-    fun Modifier.decorate(decoration: LaTeXDecoration) = this.then(
-        LaTeXDecoData(decoration = decoration)
+    fun Modifier.decorate(decoration: DecorationMetaphor) = this.then(
+        LaTeXDecoration(decoration = decoration)
     )
 
     @Stable
-    fun Modifier.arrayMetaphor(metaphor: ArrayMetaphor) = this.then(
-        LaTeXArrayMetaphorDetail(metaphor = metaphor)
+    fun Modifier.attachArrayCellMetaphor(metaphor: ArrayCellMetaphor) = this.then(
+        LaTeXArrayCell(metaphor = metaphor)
     )
 
     @Stable
-    fun Modifier.mathMetaphor(metaphor: MathMetaphor) = this.then(
-        LaTeXMathMetaphorDetail(metaphor = metaphor)
+    fun Modifier.attachMathMetaphor(metaphor: MathMetaphor) = this.then(
+        LaTeXMathMetaphor(metaphor = metaphor)
     )
 
     companion object : LaTeXScope
 }
 
-private class LaTeXAlignData(
-    val alignment: LaTeXAlignment
+private class LaTeXAlignment(
+    val alignment: AlignmentMetaphor
 ) : ParentDataModifier {
 
-    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXAlignData
+    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXAlignment
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        val otherModifier = other as? LaTeXAlignData ?: return false
+        val otherModifier = other as? LaTeXAlignment ?: return false
 
         return (alignment == otherModifier.alignment)
     }
 
     override fun toString(): String =
-        "LaTeXAlignData(alignment=$alignment)"
+        "LaTeXAlignment(alignment=$alignment)"
 
     override fun hashCode(): Int {
         return alignment.hashCode()
     }
 }
 
-private val Measurable.alignment: LaTeXAlignment
+private val Measurable.alignment: AlignmentMetaphor
     get() {
-        val childData = parentData as? LaTeXAlignData
-        return childData?.alignment ?: LaTeXAlignment.UNSPECIFIED
+        val childData = parentData as? LaTeXAlignment
+        return childData?.alignment ?: AlignmentMetaphor.UNSPECIFIED
     }
 
-private class LaTeXParenthesisDetail(
+private class LaTeXParenthesis(
     val directionOfOpening: LayoutDirection?,
     val type: Char?
 ) : ParentDataModifier {
 
-    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXParenthesisDetail
+    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXParenthesis
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as LaTeXParenthesisDetail
+        other as LaTeXParenthesis
 
         if (directionOfOpening != other.directionOfOpening) return false
         if (type != other.type) return false
@@ -1306,7 +1367,7 @@ private class LaTeXParenthesisDetail(
     }
 
     override fun toString(): String =
-        "LaTeXParenthesisDetail(directionOfOpening=$directionOfOpening, type=$type)"
+        "LaTeXParenthesis(directionOfOpening=$directionOfOpening, type=$type)"
 
     override fun hashCode(): Int {
         var result = directionOfOpening?.hashCode() ?: 0
@@ -1315,81 +1376,81 @@ private class LaTeXParenthesisDetail(
     }
 }
 
-private val Measurable.parenthesis: LaTeXParenthesisDetail?
+private val Measurable.parenthesis: LaTeXParenthesis?
     get() {
-        val childData = parentData as? LaTeXParenthesisDetail
+        val childData = parentData as? LaTeXParenthesis
         return childData
     }
 
-private class LaTeXDecoData(
-    val decoration: LaTeXDecoration
+private class LaTeXDecoration(
+    val decoration: DecorationMetaphor
 ) : ParentDataModifier {
 
-    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXDecoData
+    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXDecoration
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        val otherModifier = other as? LaTeXDecoData ?: return false
+        val otherModifier = other as? LaTeXDecoration ?: return false
 
         return (decoration == otherModifier.decoration)
     }
 
     override fun toString(): String =
-        "LaTeXDecoData(decoration=$decoration)"
+        "LaTeXDecoration(decoration=$decoration)"
 
     override fun hashCode(): Int {
         return decoration.hashCode()
     }
 }
 
-private val Measurable.decoration: LaTeXDecoration
+private val Measurable.decoration: DecorationMetaphor
     get() {
-        val childData = parentData as? LaTeXDecoData
-        return childData?.decoration ?: LaTeXDecoration.UNSPECIFIED
+        val childData = parentData as? LaTeXDecoration
+        return childData?.decoration ?: DecorationMetaphor.UNSPECIFIED
     }
 
-private class LaTeXArrayMetaphorDetail(
-    val metaphor: ArrayMetaphor
+private class LaTeXArrayCell(
+    val metaphor: ArrayCellMetaphor
 ) : ParentDataModifier {
 
-    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXArrayMetaphorDetail
+    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXArrayCell
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        val otherModifier = other as? LaTeXArrayMetaphorDetail ?: return false
+        val otherModifier = other as? LaTeXArrayCell ?: return false
 
         return (metaphor == otherModifier.metaphor)
     }
 
     override fun toString(): String =
-        "LaTeXArrayMetaphorDetail(metaphor=$metaphor)"
+        "LaTeXArrayCell(metaphor=$metaphor)"
 
     override fun hashCode(): Int {
         return metaphor.hashCode()
     }
 }
 
-private val Measurable.arrayMetaphor: ArrayMetaphor
+private val Measurable.arrayCellMetaphor: ArrayCellMetaphor
     get() {
-        val childData = parentData as? LaTeXArrayMetaphorDetail
-        return childData?.metaphor ?: ArrayMetaphor.UNSPECIFIED
+        val childData = parentData as? LaTeXArrayCell
+        return childData?.metaphor ?: ArrayCellMetaphor.UNSPECIFIED
     }
 
-private class LaTeXMathMetaphorDetail(
+private class LaTeXMathMetaphor(
     val metaphor: MathMetaphor
 ) : ParentDataModifier {
 
-    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXMathMetaphorDetail
+    override fun Density.modifyParentData(parentData: Any?) = this@LaTeXMathMetaphor
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        val otherModifier = other as? LaTeXMathMetaphorDetail ?: return false
+        val otherModifier = other as? LaTeXMathMetaphor ?: return false
 
         return (metaphor == otherModifier.metaphor)
     }
 
     override fun toString(): String =
-        "LaTeXMathMetaphorDetail(metaphor=$metaphor)"
+        "LaTeXMathMetaphor(metaphor=$metaphor)"
 
     override fun hashCode(): Int {
         return metaphor.hashCode()
@@ -1398,6 +1459,6 @@ private class LaTeXMathMetaphorDetail(
 
 private val Measurable.mathMetaphor: MathMetaphor
     get() {
-        val childData = parentData as? LaTeXMathMetaphorDetail
+        val childData = parentData as? LaTeXMathMetaphor
         return childData?.metaphor ?: MathMetaphor.UNSPECIFIED
     }
