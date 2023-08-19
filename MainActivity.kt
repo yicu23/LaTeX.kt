@@ -1,28 +1,60 @@
-package com.example.fxcalculator
+package com.example.fxcalculator.ui
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.fxcalculator.ui.FullScreen
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.sp
+import com.example.fxcalculator.LaTeX
 import com.example.fxcalculator.ui.theme.FxCalculatorTheme
+import com.example.fxcalculator.ui.theme.Typography
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            FxCalculatorTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    FullScreen()
-                }
-            }
-        }
+@Composable
+fun FullScreen(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
+        DisplayBar()
+    }
+}
+
+@Composable
+fun DisplayBar() {
+    LaTeX(
+        laTeX = "\\left{" + "\\begin{array}{rc||l|}" +
+                "+1 &  & 8{+}8 \\\\ 1+-1 & 2\\sin4\\degree & 8+8" +
+                "\\\\ \\sqrt[3]\\frac12" +
+                "\\end{array}\\right}", fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "\\int_1^\\infty\\dfrac12\\mathrm{d}x",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "\\Prod_{i=1}^{24}\\dfrac{i}2",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "f(x):A\\Rightarrow +B>=+\\ln(\\log{c})",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "\\Lim_{x\\rightarrow\\infty}\\frac{x^2-\\sqrt{x-1}}{x^2+\\sqrt{x-1}}",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    FxCalculatorTheme {
+        FullScreen()
     }
 }
