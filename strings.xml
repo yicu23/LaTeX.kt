@@ -1,14 +1,51 @@
 <resources>
-    <string name="app_name">LaTeX</string>
+    <string name="app_name">FxCalculator</string>
     <string-array name="unicode">
         <item>;#\u2004</item>
         <item>:#\u2005</item>
         <item>,#\u2006</item>
-        <item>|#\u2016</item>
+
         <item>vert#\u007c</item>
+        <item>|#\u2016</item>
+
         <item>div#\u007c</item>
         <item>times#\u00d7</item>
+
+        <item>&lt;#\u003c</item>
+        <item>&lt;=#\u2264</item>
+        <item>=#\u003d</item>
+        <item>&gt;=#\u2265</item>
+        <item>&gt;#\u003e</item>
+
         <item>degree#\u00b0</item>
+        <item>propto#\u221d</item>
+        <item>infty#\u221e</item>
+
+        <item>prod#\u220f</item>
+        <item>Prod#\u220f</item>
+        <item>sum#\u2211</item>
+        <item>Sum#\u2211</item>
+        <item>int#\u222b</item>
+        <item>lim#lim</item>
+        <item>Lim#lim</item>
+
+        <item>leftarrow#\u2190</item>
+        <item>uparrow#\u2191</item>
+        <item>rightarrow#\u2192</item>
+        <item>downarrow#\u2193</item>
+        <item>leftrightarrow#\u2194</item>
+        <item>updownarrow#\u2195</item>
+        <item>nwarrow#\u2196</item>
+        <item>nearrow#\u2197</item>
+        <item>searrow#\u2198</item>
+        <item>swarrow#\u2199</item>
+        <item>Leftarrow#\u21d0</item>
+        <item>Uparrow#\u21d1</item>
+        <item>Rightarrow#\u21d2</item>
+        <item>Downarrow#\u21d3</item>
+        <item>Leftrightarrow#\u21d4</item>
+        <item>Updownarrow#\u21d5</item>
+
         <item>Alpha#\u0391</item>
         <item>Beta#\u0392</item>
         <item>Gamma#\u0393</item>
@@ -57,6 +94,7 @@
         <item>chi#\u03c7</item>
         <item>psi#\u03c8</item>
         <item>omega#\u03c9</item>
+
         <item>sin#sin</item>
         <item>cos#cos</item>
         <item>tan#tan</item>
@@ -71,7 +109,7 @@
         <item>coth#coth</item>
         <item>sec#sec</item>
         <item>csc#csc</item>
-        <item>ln#ln</item>
-        <item>log#log</item>
+        <item>ln#\u2113n</item>
+        <item>log#\u2113og</item>
     </string-array>
 </resources>
