@@ -1,42 +1,28 @@
-package com.example.latex
+package com.example.fxcalculator
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Row
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.latex.ui.theme.LaTeXTheme
-import com.example.latex.ui.theme.Typography
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import com.example.fxcalculator.ui.FullScreen
+import com.example.fxcalculator.ui.theme.FxCalculatorTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            LaTeXTheme {
+            FxCalculatorTheme {
                 // A surface container using the 'background' color from the theme
-                Row() {
-                    Greeting()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    FullScreen()
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting() {
-    LaTeX(
-        laTeX = "\\left{" + "\\begin{array}{rc||l|}" +
-                "+11 &  & 8{+}8 \\\\ & \\sin4\\degree & 8+8" +
-                "\\\\ \\sqrt[3]\\frac12" +
-                "\\end{array}\\right}", fontSize = Typography.bodyLarge.fontSize
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    LaTeXTheme {
-        Greeting()
     }
 }
