@@ -1,12 +1,9 @@
-// TODO:
+// TODO: support for Set operations, convert some symbols to custom fonts such as \int, \sum
 // Since last update:
 // (please update strings.xml)
-// \infty and \.*arrow included
-// Support for \sum, \Sum, \prod, \Prod
-// Support for \lim and \Lim
-// Using custom fonts to replace '+' and '-'
-// Corrected spacings between elements
-// Various minor bug fixes
+// Fixed \{, \langle, etc.
+// Support for \iint, \oiint, \Iint, etc.
+// Added \cdot, \ldots, \cdots, \vdots, \ddots
 
 /* The following is useful that I just keep it for reference later
 
@@ -563,6 +560,26 @@ private object LaTeX {
             Pair(6, 70), Pair(38, 70), Pair(1, 1), Pair(76, 70),
             Pair(14, 10), Pair(2, 10), Pair(2, 10)
         ),
+        "iint" to listOf(
+            Pair(6, 70), Pair(38, 70), Pair(1, 1), Pair(76, 70),
+            Pair(1, 1), Pair(0, 1), Pair(2, 10)
+        ),
+        "iiint" to listOf(
+            Pair(6, 70), Pair(38, 70), Pair(1, 1), Pair(76, 70),
+            Pair(1, 1), Pair(0, 1), Pair(2, 10)
+        ),
+        "oint" to listOf(
+            Pair(6, 70), Pair(38, 70), Pair(1, 1), Pair(76, 70),
+            Pair(36, 40), Pair(-1, 16), Pair(2, 10)
+        ),
+        "oiint" to listOf(
+            Pair(6, 70), Pair(38, 70), Pair(1, 1), Pair(76, 70),
+            Pair(37, 40), Pair(-1, 20), Pair(2, 10)
+        ),
+        "oiiint" to listOf(
+            Pair(6, 70), Pair(38, 70), Pair(1, 1), Pair(76, 70),
+            Pair(38, 40), Pair(-1, 36), Pair(2, 10)
+        ),
         "arrow" to listOf(
             Pair(2, 14), Pair(4, 14), Pair(6, 14), Pair(8, 14),
             Pair(1, 1), Pair(0, 1), Pair(36, 70)
@@ -606,7 +623,7 @@ private object LaTeX {
             }
 
             val correctionPair =
-                fontCorrectionMatrix[measurable.fontCorrectionInfo.lowercase()]!!
+                fontCorrectionMatrix[measurable.fontCorrectionInfo]!!
 
             val alignmentLinesMap = mutableMapOf<AlignmentLine, Int>(
                 CeilingLine to refHeight.correct(correctionPair[0]),
@@ -616,17 +633,19 @@ private object LaTeX {
             )
 
             val correctWidth = placeable.width.correct(correctionPair[4])
+            val correctHeight = alignmentLinesMap[BasementLine]!!
 
             if (debug && turtlePath.isEmpty) with(turtlePath) {
                 moveTo(0, 0)
                 relativeLineTo(correctWidth, 0)
+                relativeLineTo(0, correctHeight)
+                relativeLineTo(-correctWidth, 0)
+                relativeLineTo(0, -correctHeight)
                 moveTo(0, alignmentLinesMap[CeilingLine]!!)
                 relativeLineTo(correctWidth, 0)
                 moveTo(0, alignmentLinesMap[WaistLine]!!)
                 relativeLineTo(correctWidth, 0)
                 moveTo(0, alignmentLinesMap[FloorLine]!!)
-                relativeLineTo(correctWidth, 0)
-                moveTo(0, alignmentLinesMap[BasementLine]!!)
                 relativeLineTo(correctWidth, 0)
             }
 
@@ -1207,7 +1226,7 @@ private object ParseLaTeX {
                         }
                     }
 
-                    "}", "]" -> {
+                    "}" -> {
                         ptr--
                         status = ParseLaTeXStatus.EXIT
                     }
@@ -1251,7 +1270,10 @@ private object ParseLaTeX {
                         )
                     }
 
-                    else -> {
+                    else -> if (meta == "]" && regex == RegexEndAtBracket) {
+                        ptr--
+                        status = ParseLaTeXStatus.EXIT
+                    } else {
                         metaNoSpace = meta!!.replace(" ", "")
                         if (metaNoSpace.isNotEmpty()) {
                             Text(
@@ -1392,7 +1414,7 @@ private object ParseLaTeX {
 
             "lim", "Lim" -> {
                 Text(
-                    text = Command2Unicode[command]!!,
+                    text = command.lowercase(),
                     fontSize = fontSize,
                     modifier = if (command.first().isUpperCase()) {
                         modifier.attachMathMetaphor(MathMetaphor.COLLECTIVEOP)
@@ -1402,16 +1424,8 @@ private object ParseLaTeX {
                 )
             }
 
-            "int" -> {
-                LaTeX.FontCorrection(modifier = modifier, fontSize = fontSize) {
-                    Text(
-                        text = Command2Unicode[command]!!,
-                        fontSize = fontSize.times(2.5),
-                        modifier = Modifier.setFontCorrectionInfo(command)
-                    )
-                }
-            }
-
+            "int", "Int", "iint", "Iint", "iiint", "Iiint",
+            "oint", "Oint", "oiint", "Oiint", "oiiint", "Oiiint",
             "sum", "Sum", "prod", "Prod" -> {
                 LaTeX.FontCorrection(
                     modifier = if (command.first().isUpperCase()) {
@@ -1422,9 +1436,11 @@ private object ParseLaTeX {
                     fontSize = fontSize
                 ) {
                     Text(
-                        text = Command2Unicode[command]!!,
-                        fontSize = fontSize.times(2),
-                        modifier = Modifier.setFontCorrectionInfo(command)
+                        text = Command2Unicode[command.lowercase()]!!,
+                        fontSize = fontSize.times(
+                            if (command.takeLast(3).lowercase() == "int") 2.5f else 2f
+                        ),
+                        modifier = Modifier.setFontCorrectionInfo(command.lowercase())
                     )
                 }
             }
