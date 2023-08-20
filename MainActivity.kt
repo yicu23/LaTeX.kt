@@ -42,11 +42,23 @@ fun DisplayBar() {
         fontSize = Typography.bodyLarge.fontSize
     )
     LaTeX(
-        laTeX = "f(x):A\\Rightarrow +B>=+\\ln(\\log{c})",
+        laTeX = "\\{f(x):A\\Rightarrow +B>=+\\ln(\\log{c})",
         fontSize = Typography.bodyLarge.fontSize
     )
     LaTeX(
-        laTeX = "\\Lim_{x\\rightarrow\\infty}\\frac{x^2-\\sqrt{x-1}}{x^2+\\sqrt{x-1}}",
+        laTeX = "\\Lim_{x\\rightarrow\\infty}\\frac{x^2-\\sqrt[3]{x-1}}{x^2+\\sqrt[3]{x-1}}",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "\\int\\iint\\iiint\\oint\\oiint\\oiiint",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "\\Iint_{S}\\nabla\\times F\\cdot\\mathrm{d}S",
+        fontSize = Typography.bodyLarge.fontSize
+    )
+    LaTeX(
+        laTeX = "\\ldots\\cdots\\vdots\\ddots",
         fontSize = Typography.bodyLarge.fontSize
     )
 }
