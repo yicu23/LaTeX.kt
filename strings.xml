@@ -10,6 +10,20 @@
 
         <item>div#\u007c</item>
         <item>times#\u00d7</item>
+        <item>cdot#\u00b7</item>
+        <item>ldots#\u2026</item>
+        <item>cdots#\u22ef</item>
+        <item>vdots#\u22ee</item>
+        <item>ddots#\u22f1</item>
+
+        <item>(#(</item>
+        <item>)#)</item>
+        <item>[#[</item>
+        <item>]#]</item>
+        <item>{#{</item>
+        <item>}#}</item>
+        <item>langle#\u27e8</item>
+        <item>rangle#\u27e9</item>
 
         <item>&lt;#\u003c</item>
         <item>&lt;=#\u2264</item>
@@ -22,12 +36,14 @@
         <item>infty#\u221e</item>
 
         <item>prod#\u220f</item>
-        <item>Prod#\u220f</item>
         <item>sum#\u2211</item>
-        <item>Sum#\u2211</item>
         <item>int#\u222b</item>
-        <item>lim#lim</item>
-        <item>Lim#lim</item>
+        <item>iint#\u222c</item>
+        <item>iiint#\u222d</item>
+        <item>oint#\u222e</item>
+        <item>oiint#\u222f</item>
+        <item>oiiint#\u2230</item>
+        <item>nabla#\u2207</item>
 
         <item>leftarrow#\u2190</item>
         <item>uparrow#\u2191</item>
